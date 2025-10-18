@@ -8,3 +8,5 @@ wheels/
 
 # Virtual environments
 .venv
+
+ffmpeg-8.0-essentials_build

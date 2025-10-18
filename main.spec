@@ -2,9 +2,9 @@
 
 
 a = Analysis(
-    ['main.py'],
+    ['C:\\Users\\tim\\youtube-downloader-gui\\main.py'],
     pathex=[],
-    binaries=[],
+    binaries=[('C:\\Users\\tim\\youtube-downloader-gui\\ffmpeg-8.0-essentials_build\\bin\\ffmpeg.exe', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],

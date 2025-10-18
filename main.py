@@ -7,6 +7,17 @@ import os
 from pathlib import Path
 #    yt_dlp.main(["--recode-video", "mp4", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"])
 
+# Detect PyInstaller runtime extraction path
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS  # folder where bundled files are extracted
+else:
+    base_path = os.path.dirname(__file__)
+
+# Path to the bundled ffmpeg
+ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+
+
+    
 
 def get_download_folder() -> str:
     """Return the default Downloads folder for Windows, Linux, or fallback to home."""
@@ -56,6 +67,7 @@ def download_video():
             ydl_opts: yt_dlp._Params  = {
                 'outtmpl': f'{save_path}/%(title)s.%(ext)s',
                 'format': 'bestvideo+bestaudio/best',
+                "ffmpeg_location": ffmpeg_path,
                 'merge_output_format': 'mp4',
             }
 
