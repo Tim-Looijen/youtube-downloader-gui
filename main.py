@@ -56,7 +56,7 @@ def get_download_folder() -> str:
 
 # Use download with a hook to get the final file path
 def download_complete_hook(d):
-    if d['status'] == 'finished' and d.get('is_final', False):
+    if d['status'] == 'finished' and d['filename'].endswith('.mp4'):
         # The 'filename' key is the full path to the downloaded file
         downloaded_file = d['filename']
         # Open Explorer and select the file
@@ -91,7 +91,6 @@ def download_video():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
-            messagebox.showinfo("Success", "Download complete!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to download: {e}")
         finally:
