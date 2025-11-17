@@ -72,7 +72,7 @@ def download_video():
         try:
             ydl_opts: yt_dlp._Params  = {
                 'outtmpl': f'{save_path}/%(title)s.%(ext)s',
-                'format': 'bestvideo+bestaudio/best',
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
                 "ffmpeg_location": ffmpeg_path,
                 'merge_output_format': 'mp4',
             }
