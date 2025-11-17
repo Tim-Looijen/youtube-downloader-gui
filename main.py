@@ -16,8 +16,13 @@ else:
 # Path to the bundled ffmpeg
 ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
 
+def verify_link(link: str) -> str:
+    good_link = link
+    if (link.__contains__("&")):
+        good_link = link.split("&")[0]
+        return good_link
+    return link
 
-    
 
 def get_download_folder() -> str:
     """Return the default Downloads folder for Windows, Linux, or fallback to home."""
@@ -53,6 +58,7 @@ def download_video():
     if not url:
         messagebox.showerror("Error", "Please enter a YouTube URL.")
         return
+    url = verify_link(url)
 
     # Ask user where to save
     save_path = filedialog.askdirectory(initialdir=get_download_folder(), title="Choose download folder")
