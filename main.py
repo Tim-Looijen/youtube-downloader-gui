@@ -54,6 +54,15 @@ def get_download_folder() -> str:
         downloads = home / "Downloads"
         return str(downloads if downloads.exists() else home)
 
+# Use download with a hook to get the final file path
+def download_complete_hook(d):
+    if d['status'] == 'finished':
+        # The 'filename' key is the full path to the downloaded file
+        downloaded_file = d['filename']
+        # Open Explorer and select the file
+        messagebox.showinfo("Success", "Download complete!")
+        subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
+
 def download_video():
     url = url_entry.get().strip()
     if not url:
@@ -71,19 +80,18 @@ def download_video():
 
     def run_download():
         try:
-            output_path = f'{save_path}/%(title)s.%(ext)s'
             ydl_opts: yt_dlp._Params  = {
-                'outtmpl': output_path,
+                'outtmpl': f'{save_path}/%(title)s.%(ext)s',
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
                 "ffmpeg_location": ffmpeg_path,
                 'merge_output_format': 'mp4',
             }
 
+            ydl_opts['progress_hooks'] = [download_complete_hook]
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
             messagebox.showinfo("Success", "Download complete!")
-            subprocess.Popen(fr'explorer /select, "{output_path}"')
         except Exception as e:
             messagebox.showerror("Error", f"Failed to download: {e}")
         finally:
