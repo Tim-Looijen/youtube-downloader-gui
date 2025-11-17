@@ -4,6 +4,7 @@ import yt_dlp
 import threading
 
 import os
+import subprocess
 from pathlib import Path
 #    yt_dlp.main(["--recode-video", "mp4", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"])
 
@@ -70,8 +71,9 @@ def download_video():
 
     def run_download():
         try:
+            output_path = f'{save_path}/%(title)s.%(ext)s'
             ydl_opts: yt_dlp._Params  = {
-                'outtmpl': f'{save_path}/%(title)s.%(ext)s',
+                'outtmpl': output_path,
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
                 "ffmpeg_location": ffmpeg_path,
                 'merge_output_format': 'mp4',
@@ -81,6 +83,7 @@ def download_video():
                 ydl.download([url])
 
             messagebox.showinfo("Success", "Download complete!")
+            subprocess.Popen(fr'explorer /select, "{output_path}"')
         except Exception as e:
             messagebox.showerror("Error", f"Failed to download: {e}")
         finally:
