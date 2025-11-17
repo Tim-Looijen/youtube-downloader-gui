@@ -56,7 +56,7 @@ def get_download_folder() -> str:
 
 # Use download with a hook to get the final file path
 def download_complete_hook(d):
-    if d['status'] == 'finished':
+    if d['status'] == 'finished' and d.get('is_final', False):
         # The 'filename' key is the full path to the downloaded file
         downloaded_file = d['filename']
         # Open Explorer and select the file
