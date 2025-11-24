@@ -27,7 +27,7 @@ jobs:
 
       - name: Test
         run: |
-          ls
+          ls .\.venv\Lib\site-packages
 
       - name: Activate virtualenv
         run: |
