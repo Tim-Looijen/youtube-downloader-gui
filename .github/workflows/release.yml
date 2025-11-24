@@ -25,9 +25,18 @@ jobs:
           python -m pip install --upgrade pip
           python -m venv .venv
 
-      - name: Build EXE
+      - name: Test
+        run: |
+          ls
+
+      - name: Activate virtualenv
         run: |
           . .\.venv\Scripts\activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
+
+      - name: Build EXE
+        run: |
           pyinstaller --onefile --noconsole --add-binary=".\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe;." --add-binary=".\deno-x86_64-pc-windows-msvc\deno.exe;." .\main.py
 
       - name: Upload artifact
