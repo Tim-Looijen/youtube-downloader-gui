@@ -2,15 +2,27 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import yt_dlp
 import threading
+
 import os
 import subprocess
 from pathlib import Path
 
+# Detect PyInstaller runtime extraction path
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS  # folder where bundled files are extracted
+else:
+    base_path = os.path.dirname(__file__)
+
+# Path to the bundled ffmpeg
+ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+
 def verify_link(link: str) -> str:
+    good_link = link
     if (link.__contains__("&")):
         good_link = link.split("&")[0]
         return good_link
     return link
+
 
 def get_download_folder() -> str:
     if os.name == "nt":  # Windows
@@ -41,9 +53,7 @@ def get_download_folder() -> str:
 
 def download_complete_hook(d):
     if d['status'] == 'finished' and d['filename'].endswith('.mp4'):
-
         downloaded_file = d['filename']
-
         messagebox.showinfo("Success", "Download complete!")
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
@@ -67,7 +77,7 @@ def download_video():
             ydl_opts: yt_dlp._Params  = {
                 'outtmpl': f'{save_path}/%(title)s.%(ext)s',
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
-                #"ffmpeg_location": ffmpeg_path,
+                "ffmpeg_location": ffmpeg_path,
                 'merge_output_format': 'mp4',
             }
 
@@ -83,6 +93,7 @@ def download_video():
     # Run download in a thread so the UI doesn't freeze
     threading.Thread(target=run_download, daemon=True).start()
 
+# --- UI setup ---
 root = tk.Tk()
 root.title("YouTube Downloader")
 root.geometry("400x180")
