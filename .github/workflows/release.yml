@@ -34,7 +34,7 @@ jobs:
 
       - name: Build EXE
         run: |
-          pyinstaller --onefile --noconsole --noupx --add-binary=".\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe;." --add-binary=".\deno-x86_64-pc-windows-msvc\deno.exe;." .\main.py
+          pyinstaller --noconsole --add-binary=".\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe;." --add-binary=".\deno-x86_64-pc-windows-msvc\deno.exe;." .\main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
