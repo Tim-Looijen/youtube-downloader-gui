@@ -21,17 +21,15 @@ python -m venv .venv
 
 
 # ------------- Step 4: Manualy run PyInstaller -------------
+if (Test-Path dist) {
+    Remove-Item dist -Recurse -Force
+}
+
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoWin'; .\.venv\Scripts\Activate.ps1"
 
-# Wait until the new terminal is closed
-Write-Host "Waiting for manual build to finish. Close the new terminal when done."
-Start-Sleep -Seconds 2
+Write-Host "Waiting till building and testing is complete. Close the .venv terminal when done."
+Start-Sleep -Seconds 1
 Wait-Process -Name "powershell" -ErrorAction SilentlyContinue
 
-# ------------- Step 5: Run exe -------------
-$Exe = Get-ChildItem -Path ".\dist" -Filter *.exe -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-& $Exe.FullName
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-# ------------- Step 6: git push via bash -------------
-& $GitBash -i -c "cd '$RepoBash' && git add -A && git commit -m 'auto' && git push"
+# ------------- Step 5: git push via bash -------------
+& $GitBash -i -c "cd '$RepoBash' && git add -A && git commit -m 'Added new exe ready for release' && git push"
