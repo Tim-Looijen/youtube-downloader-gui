@@ -4,8 +4,41 @@ import yt_dlp
 import threading
 
 import os
+import sys
+import requests
 import subprocess
+import urllib.request
 from pathlib import Path
+
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    application_path = os.path.abspath(sys.executable)
+elif __file__:
+    application_path = os.path.abspath(__file__)
+
+def get_github_response():
+    github_url = "https://api.github.com/repos/Tim-Looijen/youtube-downloader-gui/releases/latest"
+    return requests.get(github_url).json()
+
+
+
+def check_for_update():
+    current_creation_time = os.path.getctime(application_path)
+    response = get_github_response()
+    update_time = response["assests"]["updated_at"]
+    if (current_creation_time > update_time):
+        if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
+            new_exe_url = response["assests"]["browser-download-url"]
+
+            path_to_exe = os.path.dirname(application_path)
+            tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
+            os.rename(application_path, tmp_name);
+
+            exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
+            os.rename(exe_path, application_path)
+
+
+
 
 # Detect PyInstaller runtime extraction path
 if getattr(sys, 'frozen', False):
