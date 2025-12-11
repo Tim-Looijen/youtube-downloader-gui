@@ -20,8 +20,6 @@ def get_github_response():
     github_url = "https://api.github.com/repos/Tim-Looijen/youtube-downloader-gui/releases/latest"
     return requests.get(github_url).json()
 
-
-
 def check_for_update():
     current_creation_time = os.path.getctime(application_path)
     response = get_github_response()
@@ -139,6 +137,6 @@ url_entry.pack(pady=5)
 
 download_button = tk.Button(root, text="Download", command=download_video)
 download_button.pack(pady=15)
-
+root.after_idle(check_for_update)
 root.mainloop()
 
