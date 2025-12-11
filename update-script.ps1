@@ -1,5 +1,4 @@
 # --- Config ---
-$PyInstallerCommand = 'pyinstaller --onefile --noconsole --add-binary="C:\Users\tim\youtube-downloader-gui\ffmpeg-8.0-essentials_build\bin\ffmpeg.exe;." --add-binary="C:\Users\tim\youtube-downloader-gui\deno-x86_64-pc-windows-msvc\deno.exe;." C:\Users\tim\youtube-downloader-gui\main.py'
 $GitBash = "C:\Program Files\Git\bin\bash.exe"          # Default Git Bash path on Win11
 
 # Convert current directory to a bash-friendly /c/... path
