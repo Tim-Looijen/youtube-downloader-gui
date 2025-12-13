@@ -1,5 +1,6 @@
 # --- Config ---
-$GitBash = "C:\Program Files\Git\bin\bash.exe"          # Default Git Bash path on Win11
+$GitBash = "C:\Program Files\Git\bin\bash.exe"
+$TagPrefix = "v1.0."
 
 # Convert current directory to a bash-friendly /c/... path
 $RepoWin = (Get-Location).Path
@@ -30,5 +31,12 @@ Write-Host "Waiting till building and testing is complete. Close the .venv termi
 Start-Sleep -Seconds 1
 Wait-Process -Name "powershell" -ErrorAction SilentlyContinue
 
-# ------------- Step 5: git push via bash -------------
-& $GitBash -i -c "cd '$RepoBash' && git add -A && git commit -m 'Added new exe ready for release' && git push"
+# ------------- Step 5: git push & release -------------
+$LatestTag = & $GitBash -lc "cd '$RepoBash'; git tag --list '${TagPrefix}*' | sort -V | tail -n 1"
+$LatestTag = $LatestTag.Trim()
+
+$Patch = [int]($LatestTag -replace "^$TagPrefix", "")
+$NewPatch = $Patch + 1
+$NewTag = "$TagPrefix$NewPatch"
+
+& $GitBash -i -c "cd '$RepoBash' && git add -A && git commit -m 'Added new exe ready for release' && git push && git tag $NewTag && git push origin $NewTag"

@@ -2,9 +2,9 @@
 
 
 a = Analysis(
-    ['C:\\Users\\tim\\youtube-downloader-gui\\main.py'],
+    [.\\main.py'],
     pathex=[],
-    binaries=[('C:\\Users\\tim\\youtube-downloader-gui\\ffmpeg-8.0-essentials_build\\bin\\ffmpeg.exe', '.'), ('C:\\Users\\tim\\youtube-downloader-gui\\deno-x86_64-pc-windows-msvc\\deno.exe', '.')],
+    binaries=[('.\\ffmpeg-8.0-essentials_build\\bin\\ffmpeg.exe', '.'), ('.\\deno-x86_64-pc-windows-msvc\\deno.exe', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
