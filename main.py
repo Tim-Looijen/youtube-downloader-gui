@@ -42,7 +42,7 @@ def check_for_update():
             tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
             os.rename(application_path, tmp_name);
 
-            new_exe_url = github_release_asset["browser-download-url"]
+            new_exe_url = github_release_asset["browser_download_url"]
             messagebox.showinfo(f"wow", f"{new_exe_url}")
             exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
             messagebox.showinfo(f"wow", f"{exe_path}")
