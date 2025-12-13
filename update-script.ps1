@@ -2,7 +2,7 @@
 $GitBash = "C:\Program Files\Git\bin\bash.exe"
 $TagPrefix = "v1.0."
 
-# Convert current directory to a bash-friendly /c/... path
+# Convert current directory to a bash-compatible path
 $RepoWin = (Get-Location).Path
 $RepoBash = "/" + $RepoWin.Substring(0,1).ToLower() + $RepoWin.Substring(2) -replace '\\','/'
 
@@ -39,7 +39,7 @@ $Patch = [int]($LatestTag -replace "^$TagPrefix", "")
 $NewPatch = $Patch + 1
 $NewTag = "$TagPrefix$NewPatch"
 
-& $GitBash -i -c "cd '$RepoBash' && git add --all && git commit -m 'Added new exe ready for release' && git push && git tag $NewTag && git push origin $NewTag"
+& $GitBash -i -c "cd '$RepoBash' && git add --all && git commit -m 'automatic-release-commit' && git push && git tag $NewTag && git push origin $NewTag"
 
 Write-Host "`nPress Enter to exit..."
 Read-Host
