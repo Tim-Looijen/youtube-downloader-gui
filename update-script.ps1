@@ -40,4 +40,7 @@ $Patch = [int]($LatestTag -replace "^$TagPrefix", "")
 $NewPatch = $Patch + 1
 $NewTag = "$TagPrefix$NewPatch"
 
-& $GitBash -i -c "cd '$RepoBash' && git add -A && git commit -m 'Added new exe ready for release' && git push && git tag $NewTag && git push origin $NewTag"
+& $GitBash -i -c "cd '$RepoBash' && git add --all && git commit -m 'Added new exe ready for release' && git push && git tag $NewTag && git push origin $NewTag"
+
+Write-Host "`nPress Enter to exit..."
+Read-Host
