@@ -24,8 +24,9 @@ python -m venv .venv
 if (Test-Path dist) {
     Remove-Item dist -Recurse -Force
 }
+$PrefilledCommand = "pyinstaller main.spec"   # EDIT THIS
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoWin'; .\.venv\Scripts\Activate.ps1"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoWin'; .\.venv\Scripts\Activate.ps1; Set-PSReadLineOption -EditMode Windows; [Microsoft.PowerShell.PSConsoleReadLine]::Insert('$PrefilledCommand')"
 
 Write-Host "Waiting till building and testing is complete. Close the .venv terminal when done."
 Start-Sleep -Seconds 1
