@@ -24,6 +24,7 @@ def check_for_update():
     current_creation_time = os.path.getctime(application_path)
     response = get_github_response()
     update_time = response["assests"]["updated_at"]
+    messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
     if (current_creation_time > update_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
             new_exe_url = response["assests"]["browser-download-url"]
@@ -34,9 +35,6 @@ def check_for_update():
 
             exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
             os.rename(exe_path, application_path)
-
-
-
 
 # Detect PyInstaller runtime extraction path
 if getattr(sys, 'frozen', False):
@@ -137,6 +135,6 @@ url_entry.pack(pady=5)
 
 download_button = tk.Button(root, text="Download", command=download_video)
 download_button.pack(pady=15)
-root.call(check_for_update)
+root.after_idle(check_for_update)
 root.mainloop()
 
