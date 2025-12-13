@@ -6,9 +6,10 @@ import threading
 import os
 import sys
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import subprocess
 import urllib.request
+import time
 from pathlib import Path
 
 # determine if application is a script file or frozen exe
@@ -30,7 +31,7 @@ def check_for_update():
     github_release_asset = get_github_response()
 
     update_time = datetime.strptime(github_release_asset['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
-    current_creation_time = datetime.fromtimestamp(os.path.getctime(application_path))
+    current_creation_time = datetime.fromtimestamp(os.path.getctime(application_path), tz=timezone.utc)
 
     # Debug message to see if the code can run
     messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
