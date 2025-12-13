@@ -23,13 +23,16 @@ def get_github_response():
     return requests.get(github_url).json()
 
 def check_for_update():
+    github_release_asset = get_github_response()["assets"][0]
+    update_time = github_release_asset["updated_at"].timestamp()
     current_creation_time = os.path.getctime(application_path)
-    response = get_github_response()
-    update_time = response["assests"]["updated_at"]
+
+    # Debug message to see if the code can run
     messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
+
     if (current_creation_time > update_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
-            new_exe_url = response["assests"]["browser-download-url"]
+            new_exe_url = github_release_asset["browser-download-url"]
 
             path_to_exe = os.path.dirname(application_path)
             tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
@@ -131,6 +134,8 @@ url_entry.pack(pady=5)
 
 download_button = tk.Button(root, text="Download", command=download_video)
 download_button.pack(pady=15)
+
 root.after(1, check_for_update)
+
 root.mainloop()
 
