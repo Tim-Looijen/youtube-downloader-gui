@@ -33,9 +33,6 @@ def check_for_update():
     update_time = datetime.strptime(github_release_asset['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
     current_creation_time = datetime.fromtimestamp(os.path.getctime(application_path), tz=timezone.utc).replace(tzinfo=None)
 
-    # Debug message to see if the code can run
-    messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
-
     if (update_time > current_creation_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
             path_to_exe = os.path.dirname(application_path)
@@ -43,10 +40,8 @@ def check_for_update():
             os.rename(application_path, tmp_name);
 
             new_exe_url = github_release_asset["browser_download_url"]
-            messagebox.showinfo(f"wow", f"{new_exe_url}")
-            exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
-            messagebox.showinfo(f"wow", f"{exe_path}")
-            os.rename(exe_path, application_path)
+            urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
+            os.remove(tmp_name)
 
 
 def verify_link(link: str) -> str:
