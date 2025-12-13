@@ -19,16 +19,18 @@ else:
     application_path = os.path.abspath(__file__)
     base_path = os.path.dirname(__file__)
 
+# Path to the bundled ffmpeg
+ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+
 def get_github_response():
     github_url = "https://api.github.com/repos/Tim-Looijen/youtube-downloader-gui/releases/latest"
-    return requests.get(github_url).json()
+    return requests.get(github_url).json()["assets"][0]
 
 def check_for_update():
-    messagebox.showinfo(f"le-path", f"{application_path}")
+    github_release_asset = get_github_response()
 
-    github_release_asset = get_github_response()["assets"][0]
-    update_time = github_release_asset["updated_at"].timestamp()
-    current_creation_time = os.path.getctime(application_path)
+    update_time = datetime.strptime(github_release_asset['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
+    current_creation_time = datetime.fromtimestamp(os.path.getctime(application_path))
 
     # Debug message to see if the code can run
     messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
@@ -43,8 +45,6 @@ def check_for_update():
             exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
             os.rename(exe_path, application_path)
 
-# Path to the bundled ffmpeg
-ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
 
 def verify_link(link: str) -> str:
     good_link = link
