@@ -6,6 +6,7 @@ import threading
 import os
 import sys
 import requests
+from datetime import datetime
 import subprocess
 import urllib.request
 from pathlib import Path
@@ -23,6 +24,8 @@ def get_github_response():
     return requests.get(github_url).json()
 
 def check_for_update():
+    messagebox.showinfo(f"le-path", f"{application_path}")
+
     github_release_asset = get_github_response()["assets"][0]
     update_time = github_release_asset["updated_at"].timestamp()
     current_creation_time = os.path.getctime(application_path)
@@ -32,12 +35,11 @@ def check_for_update():
 
     if (current_creation_time > update_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
-            new_exe_url = github_release_asset["browser-download-url"]
-
             path_to_exe = os.path.dirname(application_path)
             tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
             os.rename(application_path, tmp_name);
 
+            new_exe_url = github_release_asset["browser-download-url"]
             exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
             os.rename(exe_path, application_path)
 
