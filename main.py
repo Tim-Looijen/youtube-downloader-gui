@@ -13,8 +13,10 @@ from pathlib import Path
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
     application_path = os.path.abspath(sys.executable)
-elif __file__:
+    base_path = sys._MEIPASS  # folder where bundled files are extracted
+else:
     application_path = os.path.abspath(__file__)
+    base_path = os.path.dirname(__file__)
 
 def get_github_response():
     github_url = "https://api.github.com/repos/Tim-Looijen/youtube-downloader-gui/releases/latest"
@@ -35,12 +37,6 @@ def check_for_update():
 
             exe_path = urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
             os.rename(exe_path, application_path)
-
-# Detect PyInstaller runtime extraction path
-if getattr(sys, 'frozen', False):
-    base_path = sys._MEIPASS  # folder where bundled files are extracted
-else:
-    base_path = os.path.dirname(__file__)
 
 # Path to the bundled ffmpeg
 ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
