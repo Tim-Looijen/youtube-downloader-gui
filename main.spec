@@ -2,9 +2,9 @@
 
 
 a = Analysis(
-    [.\\main.py'],
+    ['main.py'],
     pathex=[],
-    binaries=[('.\\ffmpeg-8.0-essentials_build\\bin\\ffmpeg.exe', '.'), ('.\\deno-x86_64-pc-windows-msvc\\deno.exe', '.')],
+    binaries=[('ffmpeg-8.0-essentials_build/bin/ffmpeg.exe', '.'), ('deno-x86_64-pc-windows-msvc/deno.exe', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
