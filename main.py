@@ -131,6 +131,6 @@ url_entry.pack(pady=5)
 
 download_button = tk.Button(root, text="Download", command=download_video)
 download_button.pack(pady=15)
-root.after_idle(check_for_update)
+root.after(1, check_for_update)
 root.mainloop()
 
