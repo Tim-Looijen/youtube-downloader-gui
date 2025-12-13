@@ -35,7 +35,7 @@ def check_for_update():
     # Debug message to see if the code can run
     messagebox.showinfo(f"wow", f"Git update time: {update_time}, {application_path} update time: {current_creation_time}")
 
-    if (current_creation_time > update_time):
+    if (update_time > current_creation_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
             path_to_exe = os.path.dirname(application_path)
             tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
