@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 import subprocess
 import urllib.request
 import time
+import tempfile
+
 from pathlib import Path
 
 # determine if application is a script file or frozen exe
@@ -41,7 +43,10 @@ def check_for_update():
 
             new_exe_url = github_release_asset["browser_download_url"]
             urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
-            os.remove(tmp_name)
+            tmp_dir = tempfile.gettempdir()
+            os.rename(tmp_name, os.path.join(tmp_dir, "old-youtube-downloader.exe"))
+            subprocess.Popen([os.path.join(path_to_exe, "youtube-downloader-gui.exe")], close_fds=True)
+            sys.exit()
 
 
 def verify_link(link: str) -> str:
