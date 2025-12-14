@@ -9,10 +9,12 @@ import requests
 from datetime import datetime, timezone
 import subprocess
 import urllib.request
-import time
 import tempfile
 
 from pathlib import Path
+
+old_exe_name = "old-youtube-downloader.exe"
+main_exe_name = "youtube-downloader.exe"
 
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
@@ -37,15 +39,18 @@ def check_for_update():
 
     if (update_time > current_creation_time):
         if (messagebox.askyesno("Update", "New update available, would you like to update it now?")):
-            path_to_exe = os.path.dirname(application_path)
-            tmp_name = os.path.join(path_to_exe, "old-youtube-downloader.exe")
-            os.rename(application_path, tmp_name);
+            application_dir = os.path.dirname(application_path)
+
+            updated_old_name = os.path.join(application_dir, main_exe_name)
+            os.rename(application_path, updated_old_name);
 
             new_exe_url = github_release_asset["browser_download_url"]
-            urllib.request.urlretrieve(new_exe_url, "youtube-downloader-gui.exe")[0]
-            tmp_dir = tempfile.gettempdir()
-            os.rename(tmp_name, os.path.join(tmp_dir, "old-youtube-downloader.exe"))
-            subprocess.Popen([os.path.join(path_to_exe, "youtube-downloader-gui.exe")], close_fds=True)
+            urllib.request.urlretrieve(new_exe_url, main_exe_name)[0]
+
+            temp_dir = tempfile.gettempdir()
+            os.rename(updated_old_name, os.path.join(temp_dir, old_exe_name))
+
+            subprocess.Popen([os.path.join(application_dir, main_exe_name)], close_fds=True)
             sys.exit()
 
 
