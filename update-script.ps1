@@ -1,6 +1,8 @@
 # --- Config ---
 $GitBash = "C:\Program Files\Git\bin\bash.exe"
 $TagPrefix = "v1.0."
+$GitHubOwner = "Tim-Looijen" # Your GitHub username or org
+$GitHubRepo = "repo-name"
 
 # Convert current directory to a bash-compatible path
 $RepoWin = (Get-Location).Path
@@ -31,7 +33,7 @@ Write-Host "Waiting till building and testing is complete. Close the .venv termi
 Start-Sleep -Seconds 1
 Wait-Process -Name "powershell" -ErrorAction SilentlyContinue
 
-# ------------- Step 5: git push & release -------------
+# ------------- Step 5: git push & tag -------------
 $LatestTag = & $GitBash -lc "cd '$RepoBash'; git tag --list '${TagPrefix}*' | sort -V | tail -n 1"
 $LatestTag = $LatestTag.Trim()
 
@@ -40,6 +42,15 @@ $NewPatch = $Patch + 1
 $NewTag = "$TagPrefix$NewPatch"
 
 & $GitBash -i -c "cd '$RepoBash' && git add --all && git commit -m 'automatic-release-commit' && git push && git tag $NewTag && git push origin $NewTag"
+
+# ------------- Step 6: GitHub API Release -------------
+$ReleaseTitle = "$NewTag"
+$ReleaseNotes = "Automatic release $NewTag"
+
+# Create GitHub release (no asset attached)
+gh release create $NewTag dist\youtube-downloader-gui.exe --title $ReleaseTitle --notes $ReleaseNotes --repo "$GitHubOwner/$GitHubRepo"
+
+Write-Host "`nRelease $NewTag created successfully on GitHub."
 
 Write-Host "`nPress Enter to exit..."
 Read-Host
