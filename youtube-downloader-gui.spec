@@ -4,7 +4,7 @@
 a = Analysis(
     ['youtube-downloader-gui.py'],
     pathex=[],
-    binaries=[('external-binaries/ffmpeg-8.0-essentials_build/bin/ffmpeg.exe', '.'), ('external-binaries/deno-x86_64-pc-windows-msvc/deno.exe', '.')],
+    binaries=[('external-binaries/ffmpeg-8.0-essentials_build/ffmpeg.exe', '.'), ('external-binaries/deno-x86_64-pc-windows-msvc/deno.exe', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
