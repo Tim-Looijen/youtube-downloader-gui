@@ -1,8 +1,8 @@
 # --- Config ---
 $GitBash = "C:\Program Files\Git\bin\bash.exe"
 $TagPrefix = "v1.0."
-$GitHubOwner = "Tim-Looijen" # Your GitHub username or org
-$GitHubRepo = "repo-name"
+$GitHubOwner = "Tim-Looijen"
+$GitHubRepo = "youtube-downloader-gui"
 
 # Convert current directory to a bash-compatible path
 $RepoWin = (Get-Location).Path

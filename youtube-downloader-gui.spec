@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['main.py'],
+    ['youtube-downloader-gui.py'],
     pathex=[],
     binaries=[('external-binaries/ffmpeg-8.0-essentials_build/bin/ffmpeg.exe', '.'), ('external-binaries/deno-x86_64-pc-windows-msvc/deno.exe', '.')],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='main',
+    name='youtube-downloader-gui',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
