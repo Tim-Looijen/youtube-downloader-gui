@@ -6,10 +6,13 @@ import threading
 import os
 import sys
 import requests
-from datetime import datetime, timezone
 import subprocess
 import urllib.request
 import tempfile
+
+import hashlib
+import requests
+from pathlib import Path
 
 from pathlib import Path
 
@@ -43,25 +46,31 @@ def get_latest_release():
     response.raise_for_status()
     return response.json()["assets"][0]
 
+
+def sha256_of_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def update_needed(asset, exe_path: Path):
+    sha256_local = sha256_of_file(exe_path)
+    sha256_remote = asset["digest"]
+
+
+    if sha256_remote and sha256_local != sha256_remote:
+        return True
+
+
 def check_for_update(root, exe_path: Path):
     try:
         asset = get_latest_release()
-        update_time = datetime.strptime(
-            asset["updated_at"], "%Y-%m-%dT%H:%M:%SZ"
-        )
-        current_time = datetime.fromtimestamp(
-            exe_path.stat().st_ctime, tz=timezone.utc
-        ).replace(tzinfo=None)
-
-        if update_time <= current_time:
+        if not update_needed(asset, exe_path):
             return
 
         if not messagebox.askyesno("Update available", "Download and install update now?"):
             return
-
-        import urllib.request
-        import tempfile
-        import subprocess
 
         app_dir = exe_path.parent
         new_exe = app_dir / MAIN_EXE
@@ -83,7 +92,7 @@ def download_complete_hook(d):
         messagebox.showinfo("Success", "Download complete!")
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
-def start_download(root, url_entry, download_button, ffmpeg_path):
+def start_download(url_entry, download_button, ffmpeg_path):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Error", "Please enter a YouTube URL.")
@@ -135,7 +144,7 @@ def main():
         root,
         text="Download",
         command=lambda: start_download(
-            root, url_entry, download_button, ffmpeg_path
+            url_entry, download_button, ffmpeg_path
         ),
     )
     download_button.pack(pady=15)
