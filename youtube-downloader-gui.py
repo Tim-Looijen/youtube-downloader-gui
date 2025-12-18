@@ -56,7 +56,7 @@ def sha256_of_file(path: Path) -> str:
 
 def update_needed(asset, exe_path: Path):
     sha256_local = sha256_of_file(exe_path)
-    sha256_remote = asset["digest"]
+    sha256_remote = asset["digest"].replace("sha256:", "")
 
     messagebox.showinfo("DEBUG", f"Local: {sha256_local} \n Remote: {sha256_remote}")
 
