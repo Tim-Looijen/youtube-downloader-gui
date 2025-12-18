@@ -120,7 +120,7 @@ def start_download(root, url_entry, download_button, ffmpeg_path):
 
 def main():
     exe_path, base_path = get_runtime_paths()
-    ffmpeg_path = base_path / "ffmpeg.exe"
+    ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
 
     root = tk.Tk()
     root.title(APP_NAME)
