@@ -1,20 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from pathlib import Path
 import yt_dlp
 import threading
-
+import hashlib
 import os
 import sys
 import requests
 import subprocess
 import urllib.request
 import tempfile
-
-import hashlib
-import requests
-from pathlib import Path
-
-from pathlib import Path
 
 
 APP_NAME = "YouTube Downloader"
@@ -25,7 +20,7 @@ OLD_EXE = "old-youtube-downloader.exe"
 def get_runtime_paths():
     if getattr(sys, "frozen", False):
         exe_path = Path(sys.executable)
-        base_path = sys._MEIPASS  # folder where bundled files are extracted
+        base_path = sys._MEIPASS  # folder where bundled files are extracted in windows
     else:
         exe_path = Path(__file__).resolve()
         base_path = exe_path.parent
