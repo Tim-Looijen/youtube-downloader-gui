@@ -81,16 +81,18 @@ def check_for_update(root, exe_path: Path):
 
 
 def download_complete_hook(d):
-    if d['status'] == 'finished' and d['filename'].endswith('.mp4'):
+    if d['status'] == 'finished' and d.get('filename'):
         downloaded_file = d['filename']
         messagebox.showinfo("Success", "Download complete!")
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
-def start_download(url_entry, download_button, ffmpeg_path):
+def start_download(url_entry, download_button, ffmpeg_path, format_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Error", "Please enter a YouTube URL.")
         return
+
+    file_format = format_var.get()
 
     url = verify_link(url)
     save_dir = filedialog.askdirectory(
@@ -104,13 +106,27 @@ def start_download(url_entry, download_button, ffmpeg_path):
 
     def worker():
         try:
-            ydl_opts: yt_dlp._Params = {
-                "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
-                "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
-                "merge_output_format": "mp4",
-                "ffmpeg_location": ffmpeg_path,
-                "progress_hooks": [download_complete_hook],
-            }
+            if file_format == "mp3":
+                ydl_opts: yt_dlp._Params = {
+                    "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
+                    "format": "bestaudio/best",
+                    "ffmpeg_location": ffmpeg_path,
+                    "postprocessors": [{
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": "192",
+                    }],
+                    "progress_hooks": [download_complete_hook],
+                }
+            else:
+                ydl_opts: yt_dlp._Params = {
+                    "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
+                    "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+                    "merge_output_format": "mp4",
+                    "ffmpeg_location": ffmpeg_path,
+                    "progress_hooks": [download_complete_hook],
+                }
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
         except Exception as e:
@@ -130,18 +146,28 @@ def main():
     root.geometry("400x180")
     root.resizable(False, False)
 
+
+
     tk.Label(root, text="Enter YouTube URL:").pack(pady=(20, 5))
     url_entry = tk.Entry(root, width=75)
     url_entry.pack(pady=5)
 
+    format_var = tk.StringVar(value="mp4")
+    format_frame = tk.Frame(root)
+    format_frame.pack(pady=10)
+
+    format_menu = tk.OptionMenu(format_frame, format_var, "mp4", "mp3")
+    format_menu.config(width=5)
+    format_menu.pack(side="left", padx=(0, 10))
+
     download_button = tk.Button(
-        root,
+        format_frame,
         text="Download",
         command=lambda: start_download(
-            url_entry, download_button, ffmpeg_path
+            url_entry, download_button, ffmpeg_path, format_var
         ),
     )
-    download_button.pack(pady=15)
+    download_button.pack(side="left")
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
