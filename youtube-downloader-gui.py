@@ -16,6 +16,10 @@ APP_NAME = "YouTube Downloader"
 MAIN_EXE = "youtube-downloader.exe"
 OLD_EXE = "old-youtube-downloader.exe"
 
+FILE_FORMAT_MAP = {
+    "Video (MP4)": "mp4",
+    "Audio (MP3)": "mp3",
+}
 
 def get_runtime_paths():
     if getattr(sys, "frozen", False):
@@ -63,7 +67,7 @@ def check_for_update(root, exe_path: Path):
         if not update_needed(asset, exe_path):
             return
 
-        if not messagebox.askyesno("Update beschikbaar", "De update nu installeren?"):
+        if not messagebox.askyesno("Update beschikbaar", "Er is een update beschikbaar. Nu downloaden en installeren?"):
             return
 
         app_dir = exe_path.parent
@@ -83,27 +87,27 @@ def check_for_update(root, exe_path: Path):
 def download_complete_hook(d, file_format):
     if d['status'] == 'finished' and d['filename'].endswith(f'.{file_format}'):
         downloaded_file = d.get("filename")
-        messagebox.showinfo("Success", "Download klaar!")
+        messagebox.showinfo("Klaar", "Download voltooid!")
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
 
-def start_download(url_entry, download_button, ffmpeg_path, format_var):
+def start_download(url_entry, download_button, ffmpeg_path, format_label):
     url = url_entry.get().strip()
     if not url:
-        messagebox.showerror("Error", "Geef een geldig URL mee.")
+        messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
         return
 
-    file_format = format_var.get()
+    file_format = FILE_FORMAT_MAP.get(format_label)
 
     url = verify_link(url)
     save_dir = filedialog.askdirectory(
-        title="Choose download folder",
+        title="Kies Download Folder",
         initialdir=get_download_folder(),
     )
     if not save_dir:
         return
 
-    download_button.config(state="disabled", text="Downloading...")
+    download_button.config(state="disabled", text="Bezig met downloaden...")
 
     def worker():
         try:
@@ -131,7 +135,7 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
         except Exception as e:
-            messagebox.showerror("Downloaden niet gelukt: ", str(e))
+            messagebox.showerror("Downloaden mislukt", str(e))
         finally:
             download_button.config(state="normal", text="Download")
 
@@ -147,11 +151,11 @@ def main():
     root.geometry("400x180")
     root.resizable(False, False)
 
-    tk.Label(root, text="Vul hier de URL in:").pack(pady=(20, 5))
+    tk.Label(root, text="Voer hier de YouTube URL in:").pack(pady=(20, 5))
     url_entry = tk.Entry(root, width=75)
     url_entry.pack(pady=5)
 
-    format_var = tk.StringVar(value="mp4")
+    format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
 
     button_frame = tk.Frame(root)
     button_frame.pack(pady=15)
@@ -163,16 +167,17 @@ def main():
             url_entry, download_button, ffmpeg_path, format_var
         ),
     )
+
     download_button.pack(side="left")
 
-    # Format menu (right of download button)
-    format_menu = tk.OptionMenu(button_frame, format_var, "mp4", "mp3")
-    format_menu.config(width=5)
-    format_menu.pack(side="left", padx=(10, 0))  # gap between button & dropdown
+    format_menu = tk.OptionMenu(button_frame, format_var, *FILE_FORMAT_MAP.keys())
+    format_menu.config(width=12)
+    format_menu.pack(side="left", padx=(10, 0))
 
     button_frame.pack(anchor="center")
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
+
 if __name__ == "__main__":
     main()
