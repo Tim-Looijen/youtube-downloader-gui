@@ -117,7 +117,7 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
                     if total_bytes:
                         percent = downloaded_bytes / total_bytes * 100
                         progress_bar["value"] = percent
-                elif d["status"] == "finished" and d.get("postprocessor"):
+                elif d["status"] == "finished" or d.get("postprocessor"):
                     progress_bar["value"] = 90
 
             if file_format == "mp3":
