@@ -121,9 +121,6 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
                         progress = 90 * (1 - (1 - raw) ** 3)
                         progress_bar["value"] = progress
 
-                elif d["status"] == "finished" or d.get("postprocessor"):
-                    progress_bar["value"] = 90
-
             if file_format == "mp3":
                 ydl_opts: yt_dlp._Params = {
                     "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
