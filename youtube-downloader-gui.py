@@ -152,25 +152,25 @@ def main():
     url_entry.pack(pady=5)
 
     format_var = tk.StringVar(value="mp4")
-    format_frame = tk.Frame(root)
-    format_frame.pack(pady=10)
 
-    format_menu = tk.OptionMenu(format_frame, format_var, "mp4", "mp3")
-    format_menu.config(width=5)
-    format_menu.pack(side="right")
+    button_frame = tk.Frame(root, width=400)
+    button_frame.pack(pady=15)
 
     download_button = tk.Button(
-        format_frame,
+        button_frame,
         text="Download",
         command=lambda: start_download(
             url_entry, download_button, ffmpeg_path, format_var
         ),
     )
-    download_button.pack(anchor="center", padx=(0, 10))
+    download_button.pack(anchor="center")
+
+    format_menu = tk.OptionMenu(root, format_var, "mp4", "mp3")
+    format_menu.config(width=5)
+    format_menu.place(x=download_button.winfo_x() + 120, y=button_frame.winfo_y() + 2)
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
