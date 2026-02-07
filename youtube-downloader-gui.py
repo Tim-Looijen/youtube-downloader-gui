@@ -81,7 +81,7 @@ def check_for_update(root, exe_path: Path):
 
 
 def download_complete_hook(d, file_format):
-    if d['status'] == 'finished' and d['filename'].endswith('.{file_format}'):
+    if d['status'] == 'finished' and d['filename'].endswith(f'.{file_format}'):
         downloaded_file = d.get("filename")
         messagebox.showinfo("Success", "Download klaar!")
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
@@ -90,7 +90,7 @@ def download_complete_hook(d, file_format):
 def start_download(url_entry, download_button, ffmpeg_path, format_var):
     url = url_entry.get().strip()
     if not url:
-        messagebox.showerror("Error", "Please enter a YouTube URL.")
+        messagebox.showerror("Error", "Geef een geldig URL mee.")
         return
 
     file_format = format_var.get()
@@ -147,9 +147,7 @@ def main():
     root.geometry("400x180")
     root.resizable(False, False)
 
-
-
-    tk.Label(root, text="Enter YouTube URL:").pack(pady=(20, 5))
+    tk.Label(root, text="Vul hier de URL in:").pack(pady=(20, 5))
     url_entry = tk.Entry(root, width=75)
     url_entry.pack(pady=5)
 
@@ -159,7 +157,7 @@ def main():
 
     format_menu = tk.OptionMenu(format_frame, format_var, "mp4", "mp3")
     format_menu.config(width=5)
-    format_menu.pack(side="right", padx=(0, 10))
+    format_menu.pack(side="right")
 
     download_button = tk.Button(
         format_frame,
@@ -168,7 +166,7 @@ def main():
             url_entry, download_button, ffmpeg_path, format_var
         ),
     )
-    download_button.pack(side="left")
+    download_button.pack(anchor="center", padx=(0, 10))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
