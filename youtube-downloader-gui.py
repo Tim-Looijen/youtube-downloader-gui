@@ -91,19 +91,20 @@ def download_complete_hook(d, file_format):
         subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
 
-def start_download(url_entry, download_button, ffmpeg_path, format_label):
+def start_download(url_entry, download_button, ffmpeg_path, format_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
         return
 
-    file_format = FILE_FORMAT_MAP.get(format_label)
+    file_format = FILE_FORMAT_MAP.get(format_var.get())
 
     url = verify_link(url)
     save_dir = filedialog.askdirectory(
         title="Kies Download Folder",
         initialdir=get_download_folder(),
     )
+
     if not save_dir:
         return
 
