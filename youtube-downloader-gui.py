@@ -63,7 +63,7 @@ def check_for_update(root, exe_path: Path):
         if not update_needed(asset, exe_path):
             return
 
-        if not messagebox.askyesno("Update available", "Download and install update now?"):
+        if not messagebox.askyesno("Update beschikbaar", "De update nu installeren?"):
             return
 
         app_dir = exe_path.parent
@@ -80,12 +80,12 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def download_complete_hook(d):
-    if d.get("status") == "finished" and d.get("postprocessor"):
+def download_complete_hook(d, file_format):
+    if d['status'] == 'finished' and d['filename'].endswith('.{file_format}'):
         downloaded_file = d.get("filename")
-        if downloaded_file:
-            messagebox.showinfo("Success", "Download complete!")
-            subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
+        messagebox.showinfo("Success", "Download klaar!")
+        subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
+
 
 def start_download(url_entry, download_button, ffmpeg_path, format_var):
     url = url_entry.get().strip()
@@ -117,7 +117,7 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
                         "preferredcodec": "mp3",
                         "preferredquality": "192",
                     }],
-                    "progress_hooks": [download_complete_hook],
+                    "progress_hooks": [lambda d: download_complete_hook(d, file_format)],
                 }
             else:
                 ydl_opts: yt_dlp._Params = {
@@ -125,13 +125,13 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
                     "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
                     "merge_output_format": "mp4",
                     "ffmpeg_location": ffmpeg_path,
-                    "progress_hooks": [download_complete_hook],
+                    "progress_hooks": [lambda d: download_complete_hook(d, file_format)],
                 }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
         except Exception as e:
-            messagebox.showerror("Download failed", str(e))
+            messagebox.showerror("Downloaden niet gelukt: ", str(e))
         finally:
             download_button.config(state="normal", text="Download")
 
@@ -159,7 +159,7 @@ def main():
 
     format_menu = tk.OptionMenu(format_frame, format_var, "mp4", "mp3")
     format_menu.config(width=5)
-    format_menu.pack(side="left", padx=(0, 10))
+    format_menu.pack(side="right", padx=(0, 10))
 
     download_button = tk.Button(
         format_frame,
@@ -168,7 +168,7 @@ def main():
             url_entry, download_button, ffmpeg_path, format_var
         ),
     )
-    download_button.pack(side="right")
+    download_button.pack(side="left")
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
