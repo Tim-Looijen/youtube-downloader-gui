@@ -102,14 +102,10 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
         return
 
 
-    # Hide button + format menu, show progress bar
     download_button.pack_forget()
     format_menu.pack_forget()
-    progress_bar = ttk.Progressbar(main_frame, length=200)
+    progress_bar = ttk.Progressbar(main_frame, length=300)
     progress_bar.pack(pady=10)
-    progress_bar["value"] = 0
-
-    download_button.config(state="disabled", text="Bezig met downloaden...")
     progress_bar["value"] = 0
 
     def worker():
@@ -122,7 +118,7 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
                         percent = downloaded_bytes / total_bytes * 100
                         progress_bar["value"] = percent
                 elif d["status"] == "finished" and d.get("postprocessor"):
-                    progress_bar["value"] = 100  # ensure full bar
+                    progress_bar["value"] = 90
 
             if file_format == "mp3":
                 ydl_opts: yt_dlp._Params = {
@@ -154,6 +150,7 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
 
                 ydl.download([url])
 
+            progress_bar["value"] = 100
             messagebox.showinfo("Klaar", f"Download voltooid: {output_file.name}")
             subprocess.Popen(fr'explorer /select,"{output_file}"')
 
@@ -185,13 +182,14 @@ def main():
     button_frame.pack(pady=15)
     button_frame.pack(anchor="center")
 
+    download_button = tk.Button(button_frame, text="Download")
+    download_button.pack(side="left")
+
     format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
     format_menu = tk.OptionMenu(button_frame, format_var, *FILE_FORMAT_MAP.keys())
     format_menu.config(width=12)
     format_menu.pack(side="left", padx=(10, 0))
 
-    download_button = tk.Button(button_frame, text="Download")
-    download_button.pack(side="left")
     download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, button_frame, ffmpeg_path, format_var))
 
     root.after(100, lambda: check_for_update(root, exe_path))
