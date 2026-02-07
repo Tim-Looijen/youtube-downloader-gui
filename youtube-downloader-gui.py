@@ -81,10 +81,11 @@ def check_for_update(root, exe_path: Path):
 
 
 def download_complete_hook(d):
-    if d['status'] == 'finished' and d.get('filename'):
-        downloaded_file = d['filename']
-        messagebox.showinfo("Success", "Download complete!")
-        subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
+    if d.get("status") == "finished" and d.get("postprocessor"):
+        downloaded_file = d.get("filename")
+        if downloaded_file:
+            messagebox.showinfo("Success", "Download complete!")
+            subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
 
 def start_download(url_entry, download_button, ffmpeg_path, format_var):
     url = url_entry.get().strip()
@@ -167,7 +168,7 @@ def main():
             url_entry, download_button, ffmpeg_path, format_var
         ),
     )
-    download_button.pack(side="left")
+    download_button.pack(side="right")
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
