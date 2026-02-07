@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 import yt_dlp
 import threading
@@ -84,14 +84,7 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def download_complete_hook(d, file_format):
-    if d['status'] == 'finished' and d['filename'].endswith(f'.{file_format}'):
-        downloaded_file = d.get("filename")
-        messagebox.showinfo("Klaar", "Download voltooid!")
-        subprocess.Popen(fr'explorer /select,"{downloaded_file}"')
-
-
-def start_download(url_entry, download_button, ffmpeg_path, format_var):
+def start_download(url_entry, download_button, ffmpeg_path, format_var, progress_bar):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
@@ -110,8 +103,22 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
 
     download_button.config(state="disabled", text="Bezig met downloaden...")
 
+
+    download_button.config(state="disabled", text="Bezig met downloaden...")
+    progress_bar["value"] = 0
+
     def worker():
         try:
+            def progress_hook(d):
+                if d["status"] == "downloading":
+                    total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
+                    downloaded_bytes = d.get("downloaded_bytes", 0)
+                    if total_bytes:
+                        percent = downloaded_bytes / total_bytes * 100
+                        progress_bar["value"] = percent
+                elif d["status"] == "finished" and d.get("postprocessor"):
+                    progress_bar["value"] = 100  # ensure full bar
+
             if file_format == "mp3":
                 ydl_opts: yt_dlp._Params = {
                     "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
@@ -121,8 +128,8 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
                         "preferredquality": "192",
-                    }],
-                    "progress_hooks": [lambda d: download_complete_hook(d, file_format)],
+                        }],
+                    "progress_hooks": [progress_hook],
                 }
             else:
                 ydl_opts: yt_dlp._Params = {
@@ -130,11 +137,19 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var):
                     "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
                     "merge_output_format": "mp4",
                     "ffmpeg_location": ffmpeg_path,
-                    "progress_hooks": [lambda d: download_complete_hook(d, file_format)],
+                    "progress_hooks": [progress_hook],
                 }
 
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                output_file = ydl.prepare_filename(info)
+
                 ydl.download([url])
+
+            messagebox.showinfo("Klaar", f"Download voltooid: {Path(output_file).name}")
+            subprocess.Popen(fr'explorer /select,"{output_file}"')
+
         except Exception as e:
             messagebox.showerror("Downloaden mislukt", str(e))
         finally:
@@ -156,29 +171,26 @@ def main():
     url_entry = tk.Entry(root, width=75)
     url_entry.pack(pady=5)
 
-    format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
-
     button_frame = tk.Frame(root)
     button_frame.pack(pady=15)
+    button_frame.pack(anchor="center")
 
-    download_button = tk.Button(
-        button_frame,
-        text="Download",
-        command=lambda: start_download(
-            url_entry, download_button, ffmpeg_path, format_var
-        ),
-    )
-
-    download_button.pack(side="left")
-
+    format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
     format_menu = tk.OptionMenu(button_frame, format_var, *FILE_FORMAT_MAP.keys())
     format_menu.config(width=12)
-    format_menu.pack(side="left", padx=(10, 0))
+    format_menu.pack(side="right", padx=(10, 0))
 
-    button_frame.pack(anchor="center")
+    download_button = tk.Button(button_frame, text="Download")
+    download_button.pack(side="left", pady=(0, 10))
+
+    progress_bar = ttk.Progressbar(root, length=400)
+    progress_bar.pack(pady=(0, 10))
+
+    download_button.config(command=lambda: start_download(url_entry, download_button, ffmpeg_path, format_var, progress_bar))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
