@@ -114,9 +114,13 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
                 if d["status"] == "downloading":
                     total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
                     downloaded_bytes = d.get("downloaded_bytes", 0)
+
                     if total_bytes:
-                        percent = downloaded_bytes / total_bytes * 100
-                        progress_bar["value"] = percent
+                        raw = downloaded_bytes / total_bytes
+                        # Ease-out curve that approaches 90% but never reaches it
+                        progress = 90 * (1 - (1 - raw) ** 3)
+                        progress_bar["value"] = progress
+
                 elif d["status"] == "finished" or d.get("postprocessor"):
                     progress_bar["value"] = 90
 
