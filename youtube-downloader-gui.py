@@ -84,7 +84,7 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def start_download(url_entry, download_button, ffmpeg_path, format_var, progress_bar):
+def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_path, format_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
@@ -101,8 +101,13 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var, progress
     if not save_dir:
         return
 
-    download_button.config(state="disabled", text="Bezig met downloaden...")
 
+    # Hide button + format menu, show progress bar
+    download_button.pack_forget()
+    format_menu.pack_forget()
+    progress_bar = ttk.Progressbar(main_frame, length=200)
+    progress_bar.pack(pady=10)
+    progress_bar["value"] = 0
 
     download_button.config(state="disabled", text="Bezig met downloaden...")
     progress_bar["value"] = 0
@@ -143,17 +148,22 @@ def start_download(url_entry, download_button, ffmpeg_path, format_var, progress
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                output_file = ydl.prepare_filename(info)
+                output_file = Path(ydl.prepare_filename(info))
+                if file_format == "mp3":
+                    output_file = output_file.with_suffix(".mp3")
 
                 ydl.download([url])
 
-            messagebox.showinfo("Klaar", f"Download voltooid: {Path(output_file).name}")
+            messagebox.showinfo("Klaar", f"Download voltooid: {output_file.name}")
             subprocess.Popen(fr'explorer /select,"{output_file}"')
 
         except Exception as e:
             messagebox.showerror("Downloaden mislukt", str(e))
         finally:
-            download_button.config(state="normal", text="Download")
+            # Remove progress bar and restore button + format menu
+            progress_bar.pack_forget()
+            download_button.pack(side="left")
+            format_menu.pack(side="left", padx=(10, 0))
 
     threading.Thread(target=worker, daemon=True).start()
 
@@ -178,15 +188,11 @@ def main():
     format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
     format_menu = tk.OptionMenu(button_frame, format_var, *FILE_FORMAT_MAP.keys())
     format_menu.config(width=12)
-    format_menu.pack(side="right", padx=(10, 0))
+    format_menu.pack(side="left", padx=(10, 0))
 
     download_button = tk.Button(button_frame, text="Download")
-    download_button.pack(side="left", pady=(0, 10))
-
-    progress_bar = ttk.Progressbar(root, length=400)
-    progress_bar.pack(pady=(0, 10))
-
-    download_button.config(command=lambda: start_download(url_entry, download_button, ffmpeg_path, format_var, progress_bar))
+    download_button.pack(side="left")
+    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, button_frame, ffmpeg_path, format_var))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
