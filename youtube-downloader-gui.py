@@ -113,7 +113,9 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
     quality_label.pack_forget()
     quality_menu.pack_forget()
 
-    progress_bar = ttk.Progressbar(main_frame, length=300)
+
+
+    progress_bar = ttk.Progressbar(main_frame, length= 400)
     progress_bar.pack(pady=10)
     progress_bar["value"] = 0
 
