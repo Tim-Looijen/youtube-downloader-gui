@@ -89,7 +89,7 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def start_download(url_entry, download_button, format_menu, quality_menu, main_frame, ffmpeg_path, format_var, quality_var):
+def start_download(url_entry, download_button, format_menu, quality_label, quality_menu, main_frame, ffmpeg_path, format_var, quality_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
@@ -110,6 +110,7 @@ def start_download(url_entry, download_button, format_menu, quality_menu, main_f
 
     download_button.pack_forget()
     format_menu.pack_forget()
+    quality_label.pack_forget()
     quality_menu.pack_forget()
 
     progress_bar = ttk.Progressbar(main_frame, length=300)
@@ -176,6 +177,7 @@ def start_download(url_entry, download_button, format_menu, quality_menu, main_f
             progress_bar.pack_forget()
             download_button.pack(side="left")
             format_menu.pack(side="left", padx=(10, 0))
+            quality_label.pack(side="left", padx=(10, 0))
             quality_menu.pack(side="left", padx=(10, 0))
 
     threading.Thread(target=worker, daemon=True).start()
@@ -187,7 +189,7 @@ def main():
 
     root = tk.Tk()
     root.title(APP_NAME)
-    root.geometry("400x180")
+    root.geometry("450x200")
     root.resizable(False, False)
 
     tk.Label(root, text="Voer hier de YouTube URL in:").pack(pady=(20, 5))
@@ -207,11 +209,15 @@ def main():
     format_menu.pack(side="left", padx=(10, 0))
 
     quality_var = tk.StringVar(value="Aanbevolen")
+
+    quality_label = tk.Label(button_frame, text="Kwaliteit (video):")
+    quality_label.pack(side="left", padx=(15, 5))
+
     quality_menu = tk.OptionMenu(button_frame, quality_var, *QUALITY_MAP.keys())
     quality_menu.config(width=12)
-    quality_menu.pack(side="left", padx=(10, 0))
+    quality_menu.pack(side="left")
 
-    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_menu, button_frame, ffmpeg_path, format_var, quality_var))
+    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_label, quality_menu, button_frame, ffmpeg_path, format_var, quality_var))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
