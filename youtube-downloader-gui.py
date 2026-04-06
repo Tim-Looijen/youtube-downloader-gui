@@ -21,6 +21,11 @@ FILE_FORMAT_MAP = {
     "Audio (MP3)": "mp3",
 }
 
+QUALITY_MAP = {
+    "Aanbevolen": "recommended",
+    "Beste": "best",
+}
+
 def get_runtime_paths():
     if getattr(sys, "frozen", False):
         exe_path = Path(sys.executable)
@@ -84,13 +89,14 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_path, format_var):
+def start_download(url_entry, download_button, format_menu, quality_menu, main_frame, ffmpeg_path, format_var, quality_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
         return
 
     file_format = FILE_FORMAT_MAP.get(format_var.get())
+    quality = QUALITY_MAP.get(quality_var.get())
 
     url = verify_link(url)
     save_dir = filedialog.askdirectory(
@@ -104,6 +110,8 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
 
     download_button.pack_forget()
     format_menu.pack_forget()
+    quality_menu.pack_forget()
+
     progress_bar = ttk.Progressbar(main_frame, length=300)
     progress_bar.pack(pady=10)
     progress_bar["value"] = 0
@@ -134,14 +142,20 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
                     "progress_hooks": [progress_hook],
                 }
             else:
+                if quality == "recommended":
+                    # Limit to max 1920x1080, best audio
+                    format_string = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]"
+                else:
+                    # Default best quality
+                    format_string = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
+
                 ydl_opts: yt_dlp._Params = {
                     "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
-                    "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+                    "format": format_string,
                     "merge_output_format": "mp4",
                     "ffmpeg_location": ffmpeg_path,
                     "progress_hooks": [progress_hook],
                 }
-
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -162,6 +176,7 @@ def start_download(url_entry, download_button, format_menu, main_frame, ffmpeg_p
             progress_bar.pack_forget()
             download_button.pack(side="left")
             format_menu.pack(side="left", padx=(10, 0))
+            quality_menu.pack(side="left", padx=(10, 0))
 
     threading.Thread(target=worker, daemon=True).start()
 
@@ -191,7 +206,12 @@ def main():
     format_menu.config(width=12)
     format_menu.pack(side="left", padx=(10, 0))
 
-    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, button_frame, ffmpeg_path, format_var))
+    quality_var = tk.StringVar(value="Aanbevolen")
+    quality_menu = tk.OptionMenu(button_frame, quality_var, *QUALITY_MAP.keys())
+    quality_menu.config(width=12)
+    quality_menu.pack(side="left", padx=(10, 0))
+
+    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_menu, button_frame, ffmpeg_path, format_var, quality_var))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
