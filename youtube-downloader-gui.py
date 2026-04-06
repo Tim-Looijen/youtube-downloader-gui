@@ -189,7 +189,7 @@ def main():
 
     root = tk.Tk()
     root.title(APP_NAME)
-    root.geometry("450x200")
+    root.geometry("450x180")
     root.resizable(False, False)
 
     tk.Label(root, text="Voer hier de YouTube URL in:").pack(pady=(20, 5))
