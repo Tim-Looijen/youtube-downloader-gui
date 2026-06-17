@@ -6,5 +6,9 @@ requires-python = ">=3.13"
 dependencies = [
     "pyinstaller>=6.18.0",
     "requests>=2.32.5",
-    "yt-dlp>=2026.06.9",
+    # The [default] extra pulls in yt-dlp-ejs, which ships the JS-challenge
+    # solver scripts. PyInstaller's yt-dlp hook only bundles those scripts when
+    # the package is installed; without it a frozen build fails with
+    # "This video is not available" on videos that need signature/n solving.
+    "yt-dlp[default]>=2026.06.9",
 ]

@@ -233,10 +233,6 @@ def build_ydl_opts(save_dir, file_format, quality, paths: RuntimePaths, progress
             # Best available quality.
             opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
 
-    # Let deno fetch (and cache) the npm packages its YouTube JS-challenge solver
-    # needs on first run. Without this, yt-dlp runs deno with --cached-only/--no-remote.
-    opts["remote_components"] = ["ejs:npm"]
-
     # Point yt-dlp at the bundled Deno so it can solve YouTube's JS challenges
     # (nsig/signature). Only when the bundled binary exists (the frozen build);
     # from source we let yt-dlp auto-detect deno/node on PATH.
