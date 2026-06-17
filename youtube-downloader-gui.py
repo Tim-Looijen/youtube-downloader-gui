@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
+from dataclasses import dataclass
 import yt_dlp
 import threading
 import hashlib
@@ -26,24 +27,51 @@ QUALITY_MAP = {
     "Beste": "best",
 }
 
-def get_runtime_paths():
+
+# --------------------------------------------------------------------------- #
+# Runtime paths
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class RuntimePaths:
+    """Locations that differ between a source run and a PyInstaller build."""
+    exe_path: Path
+    base_path: str
+
+    @property
+    def ffmpeg(self) -> str:
+        return os.path.join(self.base_path, "ffmpeg.exe")
+
+    @property
+    def deno(self) -> str:
+        return os.path.join(self.base_path, "deno.exe")
+
+
+def get_runtime_paths() -> RuntimePaths:
     if getattr(sys, "frozen", False):
         exe_path = Path(sys.executable)
-        base_path = sys._MEIPASS  # folder where bundled files are extracted in windows
+        base_path = sys._MEIPASS  # folder where bundled files are extracted on Windows
     else:
         exe_path = Path(__file__).resolve()
-        base_path = exe_path.parent
+        base_path = str(exe_path.parent)
 
-    return exe_path, base_path
+    return RuntimePaths(exe_path, base_path)
 
 
+# --------------------------------------------------------------------------- #
+# Small helpers
+# --------------------------------------------------------------------------- #
 def get_download_folder() -> str:
     downloads = Path.home() / "Downloads"
     return str(downloads if downloads.exists() else Path.home())
 
+
 def verify_link(url: str) -> str:
     return url.split("&", 1)[0]
 
+
+# --------------------------------------------------------------------------- #
+# Self-update
+# --------------------------------------------------------------------------- #
 def get_latest_release():
     url = "https://api.github.com/repos/Tim-Looijen/youtube-downloader-gui/releases/latest"
     response = requests.get(url, timeout=10)
@@ -58,12 +86,11 @@ def sha256_of_file(path: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
-def update_needed(asset, exe_path: Path):
+
+def update_needed(asset, exe_path: Path) -> bool:
     sha256_local = sha256_of_file(exe_path)
     sha256_remote = asset["digest"].replace("sha256:", "")
-
-    if sha256_remote and sha256_local != sha256_remote:
-        return True
+    return bool(sha256_remote and sha256_local != sha256_remote)
 
 
 def check_for_update(root, exe_path: Path):
@@ -89,6 +116,9 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
+# --------------------------------------------------------------------------- #
+# Diagnostics (used to debug frozen-build download failures)
+# --------------------------------------------------------------------------- #
 class _CaptureLogger:
     """Minimal yt-dlp logger that captures every message for diagnostics."""
     def __init__(self):
@@ -127,7 +157,7 @@ def _probe(cmd, stdin=None):
     return "\n".join(out)
 
 
-def write_debug_report(ffmpeg_path, deno_path, url, logger, error):
+def write_debug_report(paths: RuntimePaths, url, logger, error) -> Path:
     """Dump everything we need to diagnose a frozen-build download failure."""
     lines = []
     a = lines.append
@@ -145,7 +175,7 @@ def write_debug_report(ffmpeg_path, deno_path, url, logger, error):
         a(f"yt_dlp version = ERR {ex!r}")
     a("")
     a("--- bundled binaries ---")
-    for label, p in (("ffmpeg", ffmpeg_path), ("deno", deno_path)):
+    for label, p in (("ffmpeg", paths.ffmpeg), ("deno", paths.deno)):
         try:
             exists = os.path.exists(p)
             size = os.path.getsize(p) if exists else "NA"
@@ -158,10 +188,10 @@ def write_debug_report(ffmpeg_path, deno_path, url, logger, error):
         a(f"{k} = {os.environ.get(k)}")
     a("")
     a("--- deno --version ---")
-    a(_probe([deno_path, "--version"]))
+    a(_probe([paths.deno, "--version"]))
     a("")
     a("--- deno trivial run (console.log('deno-ok')) ---")
-    a(_probe([deno_path, "run", "--no-prompt", "-"], stdin="console.log('deno-ok')"))
+    a(_probe([paths.deno, "run", "--no-prompt", "-"], stdin="console.log('deno-ok')"))
     a("")
     a("--- yt-dlp verbose log ---")
     a("\n".join(getattr(logger, "lines", [])) or "(no log captured)")
@@ -176,164 +206,177 @@ def write_debug_report(ffmpeg_path, deno_path, url, logger, error):
     return log_path
 
 
-def start_download(url_entry, download_button, format_menu, quality_label, quality_menu, main_frame, ffmpeg_path, deno_path, format_var, quality_var):
-    url = url_entry.get().strip()
-    if not url:
-        messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
-        return
+# --------------------------------------------------------------------------- #
+# Download core (no UI)
+# --------------------------------------------------------------------------- #
+def build_ydl_opts(save_dir, file_format, quality, paths: RuntimePaths, progress_hook, logger) -> dict:
+    """Build the yt-dlp options dict for the requested format and quality."""
+    opts: dict = {
+        "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
+        "ffmpeg_location": paths.ffmpeg,
+        "progress_hooks": [progress_hook],
+    }
 
-    file_format = FILE_FORMAT_MAP.get(format_var.get())
-    quality = QUALITY_MAP.get(quality_var.get())
+    if file_format == "mp3":
+        opts["format"] = "bestaudio/best"
+        opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }]
+    else:
+        opts["merge_output_format"] = "mp4"
+        if quality == "recommended":
+            # Cap at 1080p, with the best matching audio.
+            opts["format"] = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]"
+        else:
+            # Best available quality.
+            opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
 
-    url = verify_link(url)
-    save_dir = filedialog.askdirectory(
-        title="Kies Download Folder",
-        initialdir=get_download_folder(),
-    )
+    # Let deno fetch (and cache) the npm packages its YouTube JS-challenge solver
+    # needs on first run. Without this, yt-dlp runs deno with --cached-only/--no-remote.
+    opts["remote_components"] = ["ejs:npm"]
 
-    if not save_dir:
-        return
+    # Point yt-dlp at the bundled Deno so it can solve YouTube's JS challenges
+    # (nsig/signature). Only when the bundled binary exists (the frozen build);
+    # from source we let yt-dlp auto-detect deno/node on PATH.
+    if os.path.exists(paths.deno):
+        opts["js_runtimes"] = {"deno": {"path": paths.deno}}
+
+    # DIAGNOSTIC: capture yt-dlp's full verbose output so a failure on a fresh
+    # machine can be inspected (see write_debug_report).
+    opts["verbose"] = True
+    opts["logger"] = logger
+    return opts
 
 
-    download_button.pack_forget()
-    format_menu.pack_forget()
-    quality_label.pack_forget()
-    quality_menu.pack_forget()
+def run_download(url, save_dir, file_format, quality, paths: RuntimePaths, progress_hook, logger) -> Path:
+    """Download `url` into `save_dir` and return the resulting file path."""
+    opts = build_ydl_opts(save_dir, file_format, quality, paths, progress_hook, logger)
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        output_file = Path(ydl.prepare_filename(info))
+        if file_format == "mp3":
+            output_file = output_file.with_suffix(".mp3")
+        ydl.download([url])
+    return output_file
 
 
+# --------------------------------------------------------------------------- #
+# UI
+# --------------------------------------------------------------------------- #
+class App:
+    def __init__(self, root: tk.Tk, paths: RuntimePaths):
+        self.root = root
+        self.paths = paths
+        self._build_ui()
+        root.after(100, lambda: check_for_update(root, self.paths.exe_path))
 
-    progress_bar = ttk.Progressbar(main_frame, length= 400)
-    progress_bar.pack(pady=10)
-    progress_bar["value"] = 0
+    # ---- construction --------------------------------------------------- #
+    def _build_ui(self):
+        self.root.title(APP_NAME)
+        self.root.geometry("450x180")
+        self.root.resizable(False, False)
 
-    def worker():
-        debug_logger = _CaptureLogger()
+        tk.Label(self.root, text="Voer hier de YouTube URL in:").pack(pady=(20, 5))
+        self.url_entry = tk.Entry(self.root, width=75)
+        self.url_entry.pack(pady=5)
+
+        self.controls = tk.Frame(self.root)
+        self.controls.pack(pady=15)
+
+        self.download_button = tk.Button(self.controls, text="Download", command=self.on_download)
+
+        self.format_var = tk.StringVar(value=next(iter(FILE_FORMAT_MAP)))
+        self.format_menu = tk.OptionMenu(self.controls, self.format_var, *FILE_FORMAT_MAP.keys())
+        self.format_menu.config(width=12)
+
+        self.quality_var = tk.StringVar(value="Aanbevolen")
+        self.quality_label = tk.Label(self.controls, text="Kwaliteit (video):")
+        self.quality_menu = tk.OptionMenu(self.controls, self.quality_var, *QUALITY_MAP.keys())
+        self.quality_menu.config(width=12)
+
+        self.progress_bar = ttk.Progressbar(self.controls, length=400)
+
+        self._show_controls()
+
+    # ---- layout --------------------------------------------------------- #
+    def _show_controls(self):
+        self.download_button.pack(side="left")
+        self.format_menu.pack(side="left", padx=(10, 0))
+        self.quality_label.pack(side="left", padx=(15, 5))
+        self.quality_menu.pack(side="left")
+
+    def _hide_controls(self):
+        for widget in (self.download_button, self.format_menu, self.quality_label, self.quality_menu):
+            widget.pack_forget()
+
+    def _show_progress(self):
+        self.progress_bar["value"] = 0
+        self.progress_bar.pack(pady=10)
+
+    def _hide_progress(self):
+        self.progress_bar.pack_forget()
+
+    # ---- download flow -------------------------------------------------- #
+    def on_download(self):
+        url = self.url_entry.get().strip()
+        if not url:
+            messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
+            return
+
+        url = verify_link(url)
+        save_dir = filedialog.askdirectory(title="Kies Download Folder", initialdir=get_download_folder())
+        if not save_dir:
+            return
+
+        file_format = FILE_FORMAT_MAP.get(self.format_var.get())
+        quality = QUALITY_MAP.get(self.quality_var.get())
+
+        self._hide_controls()
+        self._show_progress()
+        threading.Thread(
+            target=self._worker,
+            args=(url, save_dir, file_format, quality),
+            daemon=True,
+        ).start()
+
+    def _worker(self, url, save_dir, file_format, quality):
+        logger = _CaptureLogger()
         try:
-            def progress_hook(d):
-                if d["status"] == "downloading":
-                    total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
-                    downloaded_bytes = d.get("downloaded_bytes", 0)
-
-                    if total_bytes:
-                        raw = downloaded_bytes / total_bytes
-                        # Ease-out curve that approaches 90% but never reaches it
-                        progress = 90 * (1 - (1 - raw) ** 3)
-                        progress_bar["value"] = progress
-
-            if file_format == "mp3":
-                ydl_opts: yt_dlp._Params = {
-                    "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
-                    "format": "bestaudio/best",
-                    "ffmpeg_location": ffmpeg_path,
-                    "postprocessors": [{
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": "192",
-                        }],
-                    "progress_hooks": [progress_hook],
-                }
-            else:
-                if quality == "recommended":
-                    # Limit to max 1920x1080, best audio
-                    format_string = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]"
-                else:
-                    # Default best quality
-                    format_string = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
-
-                ydl_opts: yt_dlp._Params = {
-                    "outtmpl": f"{save_dir}/%(title)s.%(ext)s",
-                    "format": format_string,
-                    "merge_output_format": "mp4",
-                    "ffmpeg_location": ffmpeg_path,
-                    "progress_hooks": [progress_hook],
-                }
-
-            # Let deno fetch (and cache) the npm packages its YouTube
-            # JS-challenge solver needs on first run. Without this, yt-dlp runs
-            # deno with --cached-only/--no-remote, so a fresh machine with an
-            # empty deno cache silently fails with "This video is not available".
-            ydl_opts["remote_components"] = ["ejs:npm"]
-
-            # Point yt-dlp at the bundled Deno so it can solve YouTube's JS
-            # challenges (nsig/signature). Only set when the bundled binary
-            # exists (i.e. the frozen build); when running from source we let
-            # yt-dlp auto-detect deno/node on PATH.
-            if os.path.exists(deno_path):
-                ydl_opts["js_runtimes"] = {"deno": {"path": deno_path}}
-
-            # DIAGNOSTIC: capture yt-dlp's full verbose output so a failure on a
-            # fresh machine can be inspected (see write_debug_report below).
-            ydl_opts["verbose"] = True
-            ydl_opts["logger"] = debug_logger
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                output_file = Path(ydl.prepare_filename(info))
-                if file_format == "mp3":
-                    output_file = output_file.with_suffix(".mp3")
-
-                ydl.download([url])
-
-            progress_bar["value"] = 100
+            output_file = run_download(url, save_dir, file_format, quality, self.paths, self._on_progress, logger)
+            self.progress_bar["value"] = 100
             messagebox.showinfo("Klaar", f"Download voltooid: {output_file.name}")
             subprocess.Popen(fr'explorer /select,"{output_file}"')
-
         except Exception as e:
-            try:
-                log_path = write_debug_report(ffmpeg_path, deno_path, url, debug_logger, e)
-                detail = f"\n\nDebug-log opgeslagen:\n{log_path}"
-            except Exception as ex2:
-                detail = f"\n\n(debug report failed: {ex2!r})"
-            messagebox.showerror("Downloaden mislukt", f"{e}{detail}")
+            self._report_failure(url, logger, e)
         finally:
-            # Remove progress bar and restore button + format menu
-            progress_bar.pack_forget()
-            download_button.pack(side="left")
-            format_menu.pack(side="left", padx=(10, 0))
-            quality_label.pack(side="left", padx=(10, 0))
-            quality_menu.pack(side="left", padx=(10, 0))
+            self._hide_progress()
+            self._show_controls()
 
-    threading.Thread(target=worker, daemon=True).start()
+    def _on_progress(self, d):
+        if d["status"] != "downloading":
+            return
+        total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
+        if not total_bytes:
+            return
+        raw = d.get("downloaded_bytes", 0) / total_bytes
+        # Ease-out curve that approaches 90% but never quite reaches it.
+        self.progress_bar["value"] = 90 * (1 - (1 - raw) ** 3)
+
+    def _report_failure(self, url, logger, error):
+        try:
+            log_path = write_debug_report(self.paths, url, logger, error)
+            detail = f"\n\nDebug-log opgeslagen:\n{log_path}"
+        except Exception as ex:
+            detail = f"\n\n(debug report failed: {ex!r})"
+        messagebox.showerror("Downloaden mislukt", f"{error}{detail}")
 
 
 def main():
-    exe_path, base_path = get_runtime_paths()
-    ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
-    deno_path = os.path.join(base_path, "deno.exe")
-
+    paths = get_runtime_paths()
     root = tk.Tk()
-    root.title(APP_NAME)
-    root.geometry("450x180")
-    root.resizable(False, False)
-
-    tk.Label(root, text="Voer hier de YouTube URL in:").pack(pady=(20, 5))
-    url_entry = tk.Entry(root, width=75)
-    url_entry.pack(pady=5)
-
-    button_frame = tk.Frame(root)
-    button_frame.pack(pady=15)
-    button_frame.pack(anchor="center")
-
-    download_button = tk.Button(button_frame, text="Download")
-    download_button.pack(side="left")
-
-    format_var = tk.StringVar(value= next(iter(FILE_FORMAT_MAP)))
-    format_menu = tk.OptionMenu(button_frame, format_var, *FILE_FORMAT_MAP.keys())
-    format_menu.config(width=12)
-    format_menu.pack(side="left", padx=(10, 0))
-
-    quality_var = tk.StringVar(value="Aanbevolen")
-
-    quality_label = tk.Label(button_frame, text="Kwaliteit (video):")
-    quality_label.pack(side="left", padx=(15, 5))
-
-    quality_menu = tk.OptionMenu(button_frame, quality_var, *QUALITY_MAP.keys())
-    quality_menu.config(width=12)
-    quality_menu.pack(side="left")
-
-    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_label, quality_menu, button_frame, ffmpeg_path, deno_path, format_var, quality_var))
-
-    root.after(100, lambda: check_for_update(root, exe_path))
+    App(root, paths)
     root.mainloop()
 
 
