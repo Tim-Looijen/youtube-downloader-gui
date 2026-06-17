@@ -89,7 +89,7 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
-def start_download(url_entry, download_button, format_menu, quality_label, quality_menu, main_frame, ffmpeg_path, format_var, quality_var):
+def start_download(url_entry, download_button, format_menu, quality_label, quality_menu, main_frame, ffmpeg_path, deno_path, format_var, quality_var):
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Fout", "Geef een geldige YouTube URL op.")
@@ -160,6 +160,13 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
                     "progress_hooks": [progress_hook],
                 }
 
+            # Point yt-dlp at the bundled Deno so it can solve YouTube's JS
+            # challenges (nsig/signature). Only set when the bundled binary
+            # exists (i.e. the frozen build); when running from source we let
+            # yt-dlp auto-detect deno/node on PATH.
+            if os.path.exists(deno_path):
+                ydl_opts["js_runtimes"] = {"deno": {"path": deno_path}}
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 output_file = Path(ydl.prepare_filename(info))
@@ -188,6 +195,7 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
 def main():
     exe_path, base_path = get_runtime_paths()
     ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+    deno_path = os.path.join(base_path, "deno.exe")
 
     root = tk.Tk()
     root.title(APP_NAME)
@@ -219,7 +227,7 @@ def main():
     quality_menu.config(width=12)
     quality_menu.pack(side="left")
 
-    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_label, quality_menu, button_frame, ffmpeg_path, format_var, quality_var))
+    download_button.config(command=lambda: start_download(url_entry, download_button, format_menu, quality_label, quality_menu, button_frame, ffmpeg_path, deno_path, format_var, quality_var))
 
     root.after(100, lambda: check_for_update(root, exe_path))
     root.mainloop()
