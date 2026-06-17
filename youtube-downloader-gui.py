@@ -160,6 +160,12 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
                     "progress_hooks": [progress_hook],
                 }
 
+            # Let deno fetch (and cache) the npm packages its YouTube
+            # JS-challenge solver needs on first run. Without this, yt-dlp runs
+            # deno with --cached-only/--no-remote, so a fresh machine with an
+            # empty deno cache silently fails with "This video is not available".
+            ydl_opts["remote_components"] = ["ejs:npm"]
+
             # Point yt-dlp at the bundled Deno so it can solve YouTube's JS
             # challenges (nsig/signature). Only set when the bundled binary
             # exists (i.e. the frozen build); when running from source we let
