@@ -89,6 +89,93 @@ def check_for_update(root, exe_path: Path):
         messagebox.showerror("Update failed", str(e))
 
 
+class _CaptureLogger:
+    """Minimal yt-dlp logger that captures every message for diagnostics."""
+    def __init__(self):
+        self.lines = []
+    def debug(self, msg):
+        self.lines.append(str(msg))
+    def info(self, msg):
+        self.lines.append(str(msg))
+    def warning(self, msg):
+        self.lines.append("WARNING: " + str(msg))
+    def error(self, msg):
+        self.lines.append("ERROR: " + str(msg))
+
+
+def _probe(cmd, stdin=None):
+    """Run a command two ways: plain subprocess, and yt-dlp's PyInstaller-aware
+    Popen. Differences between the two pinpoint a frozen-build subprocess issue."""
+    out = []
+    try:
+        kw = {"capture_output": True, "text": True, "timeout": 60}
+        if stdin is None:
+            kw["stdin"] = subprocess.DEVNULL  # windowed build has no valid stdin handle
+        else:
+            kw["input"] = stdin
+        p = subprocess.run(cmd, **kw)
+        out.append(f"[plain]      rc={p.returncode} stdout={p.stdout.strip()!r} stderr={p.stderr.strip()!r}")
+    except Exception as ex:
+        out.append(f"[plain]      EXCEPTION: {ex!r}")
+    try:
+        from yt_dlp.utils import Popen
+        proc = Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        so, se = proc.communicate(stdin)
+        out.append(f"[ytdlp Popen] rc={proc.returncode} stdout={so.strip()!r} stderr={se.strip()!r}")
+    except Exception as ex:
+        out.append(f"[ytdlp Popen] EXCEPTION: {ex!r}")
+    return "\n".join(out)
+
+
+def write_debug_report(ffmpeg_path, deno_path, url, logger, error):
+    """Dump everything we need to diagnose a frozen-build download failure."""
+    lines = []
+    a = lines.append
+    a("=== YouTube Downloader debug report ===")
+    a(f"url   : {url}")
+    a(f"error : {error!r}")
+    a("")
+    a("--- runtime ---")
+    a(f"sys.frozen     = {getattr(sys, 'frozen', False)}")
+    a(f"sys.executable = {sys.executable}")
+    a(f"sys._MEIPASS   = {getattr(sys, '_MEIPASS', None)}")
+    try:
+        a(f"yt_dlp version = {yt_dlp.version.__version__}")
+    except Exception as ex:
+        a(f"yt_dlp version = ERR {ex!r}")
+    a("")
+    a("--- bundled binaries ---")
+    for label, p in (("ffmpeg", ffmpeg_path), ("deno", deno_path)):
+        try:
+            exists = os.path.exists(p)
+            size = os.path.getsize(p) if exists else "NA"
+            a(f"{label:7}: {p}  exists={exists} size={size}")
+        except Exception as ex:
+            a(f"{label:7}: {p}  ERR {ex!r}")
+    a("")
+    a("--- relevant env ---")
+    for k in ("DENO_DIR", "LOCALAPPDATA", "APPDATA", "TEMP", "TMP", "USERPROFILE", "PYINSTALLER_RESET_ENVIRONMENT"):
+        a(f"{k} = {os.environ.get(k)}")
+    a("")
+    a("--- deno --version ---")
+    a(_probe([deno_path, "--version"]))
+    a("")
+    a("--- deno trivial run (console.log('deno-ok')) ---")
+    a(_probe([deno_path, "run", "--no-prompt", "-"], stdin="console.log('deno-ok')"))
+    a("")
+    a("--- yt-dlp verbose log ---")
+    a("\n".join(getattr(logger, "lines", [])) or "(no log captured)")
+
+    report = "\n".join(lines)
+    log_path = Path.home() / "youtube-downloader-debug.log"
+    try:
+        log_path.write_text(report, encoding="utf-8")
+    except Exception:
+        log_path = Path(tempfile.gettempdir()) / "youtube-downloader-debug.log"
+        log_path.write_text(report, encoding="utf-8")
+    return log_path
+
+
 def start_download(url_entry, download_button, format_menu, quality_label, quality_menu, main_frame, ffmpeg_path, deno_path, format_var, quality_var):
     url = url_entry.get().strip()
     if not url:
@@ -120,6 +207,7 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
     progress_bar["value"] = 0
 
     def worker():
+        debug_logger = _CaptureLogger()
         try:
             def progress_hook(d):
                 if d["status"] == "downloading":
@@ -173,6 +261,11 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
             if os.path.exists(deno_path):
                 ydl_opts["js_runtimes"] = {"deno": {"path": deno_path}}
 
+            # DIAGNOSTIC: capture yt-dlp's full verbose output so a failure on a
+            # fresh machine can be inspected (see write_debug_report below).
+            ydl_opts["verbose"] = True
+            ydl_opts["logger"] = debug_logger
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 output_file = Path(ydl.prepare_filename(info))
@@ -186,7 +279,12 @@ def start_download(url_entry, download_button, format_menu, quality_label, quali
             subprocess.Popen(fr'explorer /select,"{output_file}"')
 
         except Exception as e:
-            messagebox.showerror("Downloaden mislukt", str(e))
+            try:
+                log_path = write_debug_report(ffmpeg_path, deno_path, url, debug_logger, e)
+                detail = f"\n\nDebug-log opgeslagen:\n{log_path}"
+            except Exception as ex2:
+                detail = f"\n\n(debug report failed: {ex2!r})"
+            messagebox.showerror("Downloaden mislukt", f"{e}{detail}")
         finally:
             # Remove progress bar and restore button + format menu
             progress_bar.pack_forget()
