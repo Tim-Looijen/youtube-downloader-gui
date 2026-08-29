@@ -10,5 +10,5 @@ dependencies = [
     # solver scripts. PyInstaller's yt-dlp hook only bundles those scripts when
     # the package is installed; without it a frozen build fails with
     # "This video is not available" on videos that need signature/n solving.
-    "yt-dlp[default]>=2026.06.9",
+    "yt-dlp[default]>=2026.8.19",
 ]

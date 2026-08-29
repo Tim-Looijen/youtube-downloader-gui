@@ -27,11 +27,10 @@ if (Test-Path dist) {
     Remove-Item dist -Recurse -Force
 }
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoWin'; .\.venv\Scripts\Activate.ps1;"
+$BuildShell = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoWin'; .\.venv\Scripts\Activate.ps1;" -PassThru
 
 Write-Host "Waiting till building and testing is complete. Close the .venv terminal when done."
-Start-Sleep -Seconds 1
-Wait-Process -Name "powershell" -ErrorAction SilentlyContinue
+$BuildShell.WaitForExit()
 
 # ------------- Step 5: git push & tag -------------
 $LatestTag = & $GitBash -lc "cd '$RepoBash'; git tag --list '${TagPrefix}*' | sort -V | tail -n 1"
